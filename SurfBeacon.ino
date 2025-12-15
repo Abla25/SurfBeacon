@@ -110,12 +110,17 @@ bool anySpotFiring = false;
 uint8_t gHue = 0; 
 
 // ═══════════════════════════════════════════════════════════
-// 🛠 LOGGING HELPER
+// 🛠 LOGGING HELPER (UNIFIED)
 // ═══════════════════════════════════════════════════════════
-void addToLog(String msg) {
+// Prints to Serial AND saves to the web Log buffer
+void logSys(String msg) {
+  // Print to Serial Monitor
+  Serial.println(msg);
+  
+  // Add to Web Log (Keep last 40 lines to save RAM)
   String timeStr = timeClient.getFormattedTime();
   String stamp = "[" + timeStr.substring(0, 5) + "] ";
-  if (systemLogs.size() >= 10) systemLogs.pop_back(); 
+  if (systemLogs.size() >= 40) systemLogs.pop_back(); 
   systemLogs.insert(systemLogs.begin(), stamp + msg);
 }
 
@@ -248,6 +253,7 @@ input[type=range]::-moz-range-track { width: 100%; height: 4px; cursor: pointer;
             <div><label>Cycle Time (s)</label><input type="number" id="cycT" min="2"></div>
             <div><label>Animation</label><select id="sAnim" class="anim-sel"></select></div>
          </div>
+         <div style="margin-top:10px;font-size:11px;color:#64748b">ℹ️ Speed is auto-calculated based on surf score (Gentle → Strong).</div>
       </div>
       <div class="epic-box">
          <div class="epic-head">🔥 Epic Conditions</div>
@@ -335,7 +341,7 @@ input[type=range]::-moz-range-track { width: 100%; height: 4px; cursor: pointer;
             <select id="tz"></select>
          </div>
       </div>
-      <label style="margin-top:15px">System Log (Last 10 Events)</label>
+      <label style="margin-top:15px">System Log (Live Buffer)</label>
       <div class="log-box" id="sysLog"><div class="log-line">Loading logs...</div></div>
       <div style="margin-top:10px;font-size:11px;color:#64748b;text-align:center">Device runs on GMT time internally.</div>
     </div>
@@ -524,7 +530,7 @@ void loadHistory() {
     f.close();
     
     if (!error) {
-      Serial.println("📂 HISTORY LOADED: ");
+      logSys("📂 HISTORY LOADED");
       for (auto& s : spots) {
         if (doc.containsKey(s.name)) {
           s.lastNotifiedID = doc[s.name].as<String>();
@@ -579,17 +585,15 @@ String getHumanTimeRange(const std::vector<int>& hours) {
 }
 
 void updateForecast() {
-  addToLog("Starting Forecast Update...");
-  Serial.println("\n═══════════════════════════════════════");
+  logSys("Starting Forecast Update...");
   
   if (WiFi.status() != WL_CONNECTED) { 
-    Serial.println("❌ WiFi not connected!"); 
-    addToLog("Error: WiFi Disconnected");
+    logSys("Error: WiFi Disconnected");
     return; 
   }
 
   HTTPClient http;
-  http.setTimeout(10000); 
+  http.setTimeout(12000); 
   
   bool foundWaves = false;
   bool anyError = false;
@@ -597,7 +601,7 @@ void updateForecast() {
   for(int i=0; i<spots.size(); i++) {
     if(!spots[i].enabled || spots[i].lat.length() < 2) continue;
     yield();
-    Serial.printf("\n🔎 ANALYZING: %s\n", spots[i].name.c_str());
+    logSys("🔎 ANALYZING: " + spots[i].name);
     
     std::vector<DaySwell> swellData;
     String marineUrl = "http://marine-api.open-meteo.com/v1/marine?latitude=" + spots[i].lat + 
@@ -627,8 +631,7 @@ void updateForecast() {
     http.end();
 
     if(!marineSuccess || swellData.empty()) { 
-      Serial.println("      ❌ Marine Failed"); 
-      addToLog("Error: API Failed for " + spots[i].name);
+      logSys("❌ Marine Failed: " + spots[i].name);
       anyError = true;
       continue; 
     }
@@ -687,7 +690,9 @@ void updateForecast() {
     spots[i].humanTimeRange = getHumanTimeRange(bestDayHours);
     spots[i].isFiring = (globalMaxScore >= spots[i].minThreshold);
 
-    Serial.printf("   👉 Score: %.1f | Time: %s\n", globalMaxScore, spots[i].humanTimeRange.c_str());
+    String logInfo = "👉 Score: " + String(globalMaxScore, 1);
+    if(spots[i].isFiring) logInfo += " (FIRING!)";
+    logSys(logInfo);
 
     if (spots[i].isFiring && conf.tgEnabled) { 
         String currentEventID = spots[i].bestDayDate + "_" + String(globalMaxScore,0); 
@@ -698,8 +703,7 @@ void updateForecast() {
 
         if (shouldNotify && spots[i].lastNotifiedID != currentEventID) {
              if(bot != nullptr && conf.botToken.length() > 5) {
-                Serial.println("   🔔 Sending Notification...");
-                addToLog("Notifying: " + spots[i].name);
+                logSys("🔔 Notifying Telegram...");
                 String msg = "🏄‍♂️ *SURF CALLING!* \n\n";
                 msg += "📍 " + spots[i].name + "\n";
                 msg += "📅 " + spots[i].bestDayDate + "\n";
@@ -716,9 +720,8 @@ void updateForecast() {
     }
     delay(100); 
   }
-  if (!anyError) addToLog("Update Finished Successfully");
+  if (!anyError) logSys("Update Finished Successfully");
   anySpotFiring = foundWaves;
-  Serial.println("═══════════════════════════════════════\n");
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -734,14 +737,10 @@ bool isNightMode() {
 
 // Helper for "Coastal" effect
 void coastal_effect(CRGB baseColor, uint8_t speed) {
-  // Use a continuous time variable instead of manual millis division to avoid stutter
-  // beat8(speed) wraps 0-255 smoothly. We scale it up for noise movement.
   uint32_t t = millis() * (speed / 4); 
   
   for(int i = 0; i < NUM_LEDS; i++) {
     uint8_t noise = inoise8(i * 30, t / 10);
-    
-    // Smooth palette blending
     CRGB highlight = CRGB::White;
     CRGB med = baseColor; med.nscale8(180);
     CRGBPalette16 p = CRGBPalette16(baseColor, med, highlight, baseColor);
@@ -763,16 +762,14 @@ void renderEffect(uint8_t effectType, CRGB baseColor, uint8_t speed, uint8_t bri
 
     case 1: // BREATHE (Pulse)
       {
-        // beatsin16 generates a perfect sine wave. No manual math, no cuts.
         fill_solid(leds, NUM_LEDS, baseColor);
-        uint8_t dim = beatsin8(bpm, 50, 255); // using 8-bit for safety, equivalent visually
+        uint8_t dim = beatsin8(bpm, 50, 255); 
         for(int i=0; i<NUM_LEDS; i++) leds[i].nscale8(dim);
       }
       break;
 
     case 2: // TIDE (Flowing In/Out)
       {
-        // Use beat8 for phase to ensure 0-255 wrap without jumps
         uint8_t phase = beat8(bpm);
         for(int i=0; i<NUM_LEDS; i++) {
            uint8_t wave = sin8(phase + (i * 10));
@@ -789,7 +786,6 @@ void renderEffect(uint8_t effectType, CRGB baseColor, uint8_t speed, uint8_t bri
 
     case 4: // SWELL (Gradient)
       {
-        // beat8 wraps perfectly
         uint8_t pos = beat8(bpm);
         for(int i=0; i<NUM_LEDS; i++) {
           uint8_t dist = sin8(pos + (i * 16)); 
@@ -802,15 +798,12 @@ void renderEffect(uint8_t effectType, CRGB baseColor, uint8_t speed, uint8_t bri
     case 5: // BREAKER (Comet/Shooting Star)
       {
         fadeToBlackBy(leds, NUM_LEDS, 20);
-        // beat16 creates a sawtooth wave (0->65535->0), representing a wave travelling forward
-        // beatsin16 was creating a ping-pong (bounce back), which isn't a "Breaker"
         uint16_t pos = beat16(bpm); 
-        int pixelIndex = scale16(pos, NUM_LEDS); // Map 0-65535 to 0-NUM_LEDS
+        int pixelIndex = scale16(pos, NUM_LEDS); 
         
         if(pixelIndex < NUM_LEDS) {
           leds[pixelIndex] = CRGB::White;
         }
-        // Smooth bleed
         if(pixelIndex > 0) leds[pixelIndex - 1] += baseColor;
       }
       break;
@@ -845,7 +838,26 @@ void runAnimation() {
       // Determine Configs
       int anim = isEpic ? conf.epicAnimType : conf.surfAnimType;
       CRGB col = isEpic ? hexToCRGB(conf.epicColorHex) : hexToCRGB(s.colorHex);
-      int spd = isEpic ? conf.epicSpeed : 128; 
+      
+      // ⬇️ DYNAMIC GENTLE SPEED CALCULATION
+      uint8_t spd;
+      
+      if (isEpic) {
+        spd = conf.epicSpeed; 
+      } else {
+        // Range: 30 (Very Slow/Calm) to 110 (Active but Gentle)
+        const int MIN_ANIM_SPEED = 30;  
+        const int MAX_ANIM_SPEED = 110; 
+        
+        float range = s.epicThreshold - s.minThreshold;
+        if (range <= 0) range = 1.0; 
+        
+        float ratio = (s.surfPower - s.minThreshold) / range;
+        if (ratio < 0.0) ratio = 0.0;
+        if (ratio > 1.0) ratio = 1.0;
+        
+        spd = MIN_ANIM_SPEED + (int)(ratio * (MAX_ANIM_SPEED - MIN_ANIM_SPEED));
+      }
       
       renderEffect(anim, col, spd, conf.masterBrightness);
       FastLED.show();
@@ -1144,14 +1156,14 @@ void setup() {
   timeClient.begin();
   timeClient.setTimeOffset(conf.timeZoneOffset * 3600);
   
-  Serial.print("⏳ Waiting for NTP time...");
+  logSys("⏳ Waiting for NTP time...");
   int retry = 0;
   while(!timeClient.update() && retry < 10) {
     timeClient.forceUpdate();
     delay(500);
     retry++;
   }
-  Serial.println(timeClient.getFormattedTime());
+  logSys("Time Sync: " + timeClient.getFormattedTime());
 
   // Initial update
   updateForecast();
