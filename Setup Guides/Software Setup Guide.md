@@ -56,6 +56,8 @@ The interface works on any browser, but Chrome/Edge have the best compatibility.
 
 ## 3. Tab 1: WAVES - Your Surf Spots {#waves-tab}
 
+<img width="300" alt="Xnapper-2025-12-16-19 02 09" src="https://github.com/user-attachments/assets/b4e39a20-875e-4ac1-a1c4-38cfb4cadbad" />
+
 This is where you set up the spots you care about.
 
 ### Adding a Spot
@@ -113,6 +115,8 @@ Each spot card shows the highest score in the forecast period. Updates hourly (o
 
 If your spot only works with certain swell directions or is super wind-sensitive, turn on Pro Mode.
 
+<img width="300" alt="Xnapper-2025-12-16-19 03 57" src="https://github.com/user-attachments/assets/975aafd0-adf8-4520-bf44-107f0aace399" />
+
 ### When You Need It
 
 Use Pro Mode when:
@@ -159,6 +163,8 @@ When Pro Mode is on, the device automatically adjusts scores based on wind:
 ## 5. Tab 2: LAMP - Ambient Mode {#lamp-tab}
 
 When no spots are firing, the SurfBeacon can function as a regular lamp instead of just sitting there dark.
+
+<img width="300" alt="Xnapper-2025-12-16-19 04 21" src="https://github.com/user-attachments/assets/6b16a5b8-8e99-42a2-95ad-65899057228f" />
 
 ### Fallback Settings
 
@@ -218,6 +224,9 @@ Turn LEDs completely off during set hours. Helps you actually sleep.
 Examples:
 - Night owl: Start 1, End 10 (1 AM to 10 AM off)
 - Early riser: Start 22, End 6 (10 PM to 6 AM off)
+
+<img width="300" height="704" alt="Xnapper-2025-12-16-19 05 20" src="https://github.com/user-attachments/assets/2a7f824e-c713-4150-a41a-95c4a289bb72" />
+
 
 ### System Settings
 
@@ -388,6 +397,8 @@ Period-weighted:
 ```
 (h * h) * (p / 10) * off
 ```
+
+<img width="300" alt="Xnapper-2025-12-16-19 05 43" src="https://github.com/user-attachments/assets/15a5a286-8110-4214-9aff-37f8b9ef7216" />
 
 ### Testing
 
