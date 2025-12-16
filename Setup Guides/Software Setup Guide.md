@@ -115,7 +115,7 @@ Each spot card shows the highest score in the forecast period. Updates hourly (o
 
 If your spot only works with certain swell directions or is super wind-sensitive, turn on Pro Mode.
 
-<img width="300" alt="Xnapper-2025-12-16-19 03 57" src="https://github.com/user-attachments/assets/975aafd0-adf8-4520-bf44-107f0aace399" />
+<img width="300" alt="Xnapper-2025-12-16-19 03 35" src="https://github.com/user-attachments/assets/59c85270-abd9-49ad-a195-b6b5300a29d8" />
 
 ### When You Need It
 
