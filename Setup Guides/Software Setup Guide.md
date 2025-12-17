@@ -62,10 +62,19 @@ This is where you set up the spots you care about.
 
 ### Adding a Spot
 
-Hit "ADD NEW SPOT" and you'll get a new card with a database search tool built in.
+Hit "ADD NEW SPOT" and you'll see a new card appear.
 
-**Using the Database** (Easiest Way)
-The device has 3,000+ surf spots pre-loaded. Pick a country from the dropdown, start typing the spot name, and suggestions pop up. Click one and it auto-fills the coordinates.
+**📍 Using the Map Picker (Recommended)**
+
+Click the "OPEN MAP PICKER" button on the spot card.
+
+A map modal will open. You can drag the map to your location or use the Search Bar to find a city or beach name.
+
+Click on the water where the break is. The system will try to name the spot automatically.
+
+Click "USE THIS SPOT".
+
+Smart Validation: The device will instantly check if you clicked on land or water. If you clicked on a beach or house, it will warn you ("⛔ NO WAVES HERE"). Move the pin slightly further out into the ocean and try again.
 
 **Manual Entry**
 Or just type in:
