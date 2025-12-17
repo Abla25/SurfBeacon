@@ -25,7 +25,7 @@ extern "C" {
 #define NUM_LEDS    30      
 #define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
-#define MAX_POWER_MA 850    
+#define MAX_POWER_MA 850 
 
 CRGB leds[NUM_LEDS];
 
@@ -67,40 +67,27 @@ struct Spot {
 std::vector<Spot> spots;
 
 struct Config {
-  // MASTER SWITCHES
   bool ledsGlobalEnabled; 
   int masterBrightness; 
-  
-  // STANDARD SURF DISPLAY
   int surfCycleTime;      
   int surfAnimType;      
-  
-  // EPIC SURF DISPLAY
   int epicAnimType;
   String epicColorHex;
   int epicSpeed;
-
-  // NOTIFICATIONS
   bool tgEnabled;   
   String botToken;
   String chatId;
   int tgMode;       
   int tgThreshold;  
-
-  // LAMP FALLBACK
   bool lampFallbackEnabled; 
   String lampColorHex;        
   int lampEffect;      
   int lampSpeed;   
-  
-  // 🕒 TIME & UPDATES
   int timeZoneOffset; 
   bool dndEnabled;
   int dndStart;       
   int dndEnd;
   int updateFreqMins; 
-
-  // 🧠 PRO MATH LOGIC
   bool proFormulaEnabled;
   String proFormula;
 } conf;
@@ -110,14 +97,10 @@ bool anySpotFiring = false;
 uint8_t gHue = 0; 
 
 // ═══════════════════════════════════════════════════════════
-// 🛠 LOGGING HELPER (UNIFIED)
+// 🛠 LOGGING HELPER
 // ═══════════════════════════════════════════════════════════
-// Prints to Serial AND saves to the web Log buffer
 void logSys(String msg) {
-  // Print to Serial Monitor
   Serial.println(msg);
-  
-  // Add to Web Log (Keep last 40 lines to save RAM)
   String timeStr = timeClient.getFormattedTime();
   String stamp = "[" + timeStr.substring(0, 5) + "] ";
   if (systemLogs.size() >= 40) systemLogs.pop_back(); 
@@ -141,7 +124,7 @@ void showLoadingAnim() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 🎨 HTML INTERFACE
+// 🎨 HTML INTERFACE (Updated UI & Logic)
 // ═══════════════════════════════════════════════════════════
 const char* wifi_custom_css = "<style>body{background-color:#121212;color:#e0e0e0;font-family:sans-serif;}button{background-color:#6366f1;color:white;border:none;padding:10px;}</style>";
 
@@ -149,6 +132,8 @@ const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Surf Beacon</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
 :root{--bg:#020617;--card:#1e293b;--acc:#6366f1;--txt:#f8fafc;--border:#334155;--input-bg:#0f172a}
 *{box-sizing:border-box}
@@ -167,8 +152,6 @@ input[type=range] { -webkit-appearance: none; width: 100%; background: transpare
 input[type=range]:focus { outline: none; border: none; }
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: var(--acc); cursor: pointer; margin-top: -8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
 input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
-input[type=range]::-moz-range-thumb { height: 20px; width: 20px; border: none; border-radius: 50%; background: var(--acc); cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
-input[type=range]::-moz-range-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
 .grid-2{display:grid;grid-template-columns:1fr;gap:12px}
 @media (min-width: 480px) { .grid-2{grid-template-columns:1fr 1fr} }
 .switch{position:relative;width:44px;height:24px;background:#334155;border-radius:12px;transition:0.3s;cursor:pointer}
@@ -194,38 +177,40 @@ input[type=range]::-moz-range-track { width: 100%; height: 4px; cursor: pointer;
 .log-box{background:#0b0f19;border:1px solid #334155;border-radius:10px;padding:12px;height:140px;overflow-y:auto;font-family:'Courier New', monospace;font-size:12px;color:#cbd5e1;line-height:1.5;margin-top:10px}
 .log-line{border-bottom:1px solid #1e293b;padding-bottom:4px;margin-bottom:4px}
 .info-box{background:rgba(51,65,85,0.4);padding:15px;border-radius:10px;font-size:13px;color:#cbd5e1;line-height:1.6;margin-top:10px}
-.info-group{margin-bottom:15px}
-.info-title{color:#a5b4fc;font-weight:700;display:block;margin-bottom:4px;font-family:monospace}
-.info-list{padding-left:18px;margin:4px 0 0 0;font-size:11px;color:#94a3b8}
 .tooltip{position:relative;display:inline-block;cursor:pointer;margin-left:5px;color:var(--acc);}
 .tooltip .tt-txt{visibility:hidden;width:260px;background-color:#1e293b;color:#e0e0e0;text-align:left;border-radius:8px;padding:12px;position:absolute;z-index:100;bottom:130%;left:50%;margin-left:-130px;opacity:0;transition:opacity 0.2s;font-size:11px;line-height:1.5;box-shadow:0 10px 25px rgba(0,0,0,0.6);border:1px solid #475569}
 .tooltip:hover .tt-txt{visibility:visible;opacity:1}
 .tt-h{color:#fff;font-weight:bold;margin-bottom:4px;display:block;border-bottom:1px solid #475569;padding-bottom:2px;margin-top:6px}
-.tt-h:first-child{margin-top:0}
 .tt-r{display:flex;justify-content:space-between;padding:1px 0;color:#94a3b8}
-.tt-r span:last-child{color:var(--acc);font-weight:bold}
 .calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
 .c-btn{padding:12px 0;font-size:12px;font-weight:bold;background:#334155;border:1px solid #475569;color:#e2e8f0;border-radius:8px;cursor:pointer}
 .c-btn:active{transform:scale(0.96)}
 .c-var{background:rgba(99,102,241,0.2);color:#818cf8;border-color:rgba(99,102,241,0.4)}
 .c-act{background:#f43f5e;color:white;border-color:#f43f5e}
-.db-tool{position:relative;margin-bottom:10px}
-.sug-box{position:absolute;top:100%;left:0;width:100%;max-height:200px;overflow-y:auto;background:#1e293b;border:1px solid #475569;border-radius:0 0 10px 10px;z-index:50;display:none;box-shadow:0 10px 25px rgba(0,0,0,0.5)}
-.sug-item{padding:12px;border-bottom:1px solid #334155;cursor:pointer;transition:0.2s}
-.sug-item:hover{background:#334155}
-.sug-item span{display:block;font-weight:700;color:white}
-.sug-ctry{font-size:11px;color:#94a3b8;font-weight:400!important;margin-top:2px}
 #pwr{cursor:pointer;transition:0.3s;color:#475569}
 #pwr.on{color:#c084fc;filter:drop-shadow(0 0 8px rgba(192,132,252,0.6))}
+/* MAP STYLES */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:900;display:none;backdrop-filter:blur(5px)}
+.modal-box{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:95%;max-width:500px;background:#1e293b;border-radius:16px;border:1px solid #475569;z-index:910;display:none;padding:15px;box-shadow:0 20px 50px rgba(0,0,0,0.5)}
+#map{height:350px;width:100%;border-radius:12px;margin-top:10px;z-index:1}
+.leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+.map-search{display:flex;gap:8px;margin-bottom:8px}
+.map-res{font-size:12px;color:#a5b4fc;margin-top:10px;font-weight:600;min-height:20px}
+.btn-geo{background:var(--acc);color:white;border:none;padding:12px;border-radius:10px;font-weight:bold;cursor:pointer;flex:1;text-transform:uppercase;font-size:12px;transition:0.2s}
+.btn-close{background:#334155;color:#94a3b8;border:1px solid #475569;padding:12px;border-radius:10px;font-weight:bold;cursor:pointer;flex:1;text-transform:uppercase;font-size:12px}
+.map-hint{font-size:11px;color:#facc15;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.3);padding:8px;border-radius:8px;margin-bottom:10px;text-align:center;font-weight:600}
+.btn-geo:disabled{opacity:0.5;cursor:wait}
+.shake{animation:shake 0.5s cubic-bezier(.36,.07,.19,.97) both}
+@keyframes shake{10%,90%{transform:translate3d(-1px,0,0)}20%,80%{transform:translate3d(2px,0,0)}30%,50%,70%{transform:translate3d(-4px,0,0)}40%,60%{transform:translate3d(4px,0,0)}}
 </style></head>
 <body>
 <div class="app">
   <h1>SURF BEACON <span id="pwr" onclick="tgPwr(this)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg></span></h1>
   <div class="tabs"><div class="tab active" onclick="sw(0)">WAVES</div><div class="tab" onclick="sw(1)">LAMP</div><div class="tab" onclick="sw(2)">CONFIG</div></div>
   <div id="p0">
-    <div id="dbStat" style="text-align:center;font-size:11px;color:#64748b;margin-bottom:15px;font-weight:600">📡 Connecting...</div>
+    <div id="dbStat" style="text-align:center;font-size:11px;color:#64748b;margin-bottom:15px;font-weight:600"></div>
     <div id="list"></div>
-    <div onclick="addSpot(null, true)" style="text-align:center;padding:18px;border:2px dashed #334155;border-radius:16px;color:#94a3b8;cursor:pointer;margin-top:20px;font-weight:600;transition:0.2s;background:rgba(255,255,255,0.02)">+ ADD NEW SPOT</div>
+    <div onclick="addSpot(null)" style="text-align:center;padding:18px;border:2px dashed #334155;border-radius:16px;color:#94a3b8;cursor:pointer;margin-top:20px;font-weight:600;transition:0.2s;background:rgba(255,255,255,0.02)">+ ADD NEW SPOT</div>
   </div>
   <div id="p1" class="hidden">
     <div class="card">
@@ -234,145 +219,58 @@ input[type=range]::-moz-range-track { width: 100%; height: 4px; cursor: pointer;
       <select id="lEff" onchange="updUI()" class="anim-sel"></select>
       <div id="colBox" style="margin-top:12px"><label>Color</label><input type="color" id="lCol"></div>
       <div style="margin-top:12px"><label>Animation Speed (<span id="spdVal" style="color:var(--acc)">128</span>)</label><input type="range" id="lSpd" min="1" max="255" oninput="document.getElementById('spdVal').innerText=this.value"></div>
-      <div style="margin-top:15px;text-align:center;font-size:11px;color:#64748b">Brightness is controlled via the 'Config' tab.</div>
     </div>
   </div>
   <div id="p2" class="hidden">
     <div class="card">
       <div class="head"><span>LED & LIGHTING</span></div>
-      
       <div style="margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid #334155">
-         <label>Master Brightness (Surf & Lamp)</label>
-         <input type="range" id="mBri" min="5" max="255" oninput="document.getElementById('mBriVal').innerText=this.value">
-         <div style="text-align:right;font-size:12px;color:#94a3b8;margin-top:4px">Value: <span id="mBriVal" style="color:var(--acc);font-weight:bold">255</span></div>
+         <label>Master Brightness</label><input type="range" id="mBri" min="5" max="255" oninput="document.getElementById('mBriVal').innerText=this.value"><div style="text-align:right;font-size:12px;color:#94a3b8;margin-top:4px">Value: <span id="mBriVal" style="color:var(--acc);font-weight:bold">255</span></div>
       </div>
-
-      <div style="margin-bottom:25px">
-         <span class="sub-head">Standard Conditions</span>
-         <div class="grid-2">
-            <div><label>Cycle Time (s)</label><input type="number" id="cycT" min="2"></div>
-            <div><label>Animation</label><select id="sAnim" class="anim-sel"></select></div>
-         </div>
-         <div style="margin-top:10px;font-size:11px;color:#64748b">ℹ️ Speed is auto-calculated based on surf score (Gentle → Strong).</div>
-      </div>
-      <div class="epic-box">
-         <div class="epic-head">🔥 Epic Conditions</div>
-         <label>Animation</label><select id="eAnim" onchange="updEpicUI()" class="anim-sel"></select>
-         <div id="eColBox" style="margin-top:12px"><label>Color</label><input type="color" id="eCol"></div>
-         <div style="margin-top:12px"><label>Effect Speed</label><input type="range" id="eSpd" min="1" max="255"></div>
-      </div>
-      <div>
-         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-             <span class="sub-head" style="margin:0">Night Mode (DND)</span>
-             <div id="dndEn" class="switch" onclick="tg(this)"></div>
-         </div>
-         <div class="grid-2">
-            <div><label>Quiet Start (Hour)</label><input type="number" id="dndS" min="0" max="23" placeholder="23"></div>
-            <div><label>Quiet End (Hour)</label><input type="number" id="dndE" min="0" max="23" placeholder="7"></div>
-         </div>
-      </div>
+      <div style="margin-bottom:25px"><span class="sub-head">Standard Conditions</span><div class="grid-2"><div><label>Cycle Time (s)</label><input type="number" id="cycT" min="2"></div><div><label>Animation</label><select id="sAnim" class="anim-sel"></select></div></div></div>
+      <div class="epic-box"><div class="epic-head">🔥 Epic Conditions</div><label>Animation</label><select id="eAnim" onchange="updEpicUI()" class="anim-sel"></select><div id="eColBox" style="margin-top:12px"><label>Color</label><input type="color" id="eCol"></div><div style="margin-top:12px"><label>Effect Speed</label><input type="range" id="eSpd" min="1" max="255"></div></div>
+      <div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span class="sub-head" style="margin:0">Night Mode (DND)</span><div id="dndEn" class="switch" onclick="tg(this)"></div></div><div class="grid-2"><div><label>Quiet Start (Hour)</label><input type="number" id="dndS" min="0" max="23"></div><div><label>Quiet End (Hour)</label><input type="number" id="dndE" min="0" max="23"></div></div></div>
     </div>
     <div class="card">
       <div class="head"><span>TELEGRAM NOTIFICATIONS</span><div id="tgEn" class="switch" onclick="tg(this)"></div></div>
-      <div style="margin-bottom:12px">
-        <label>Notify When...</label>
-        <select id="tgM" onchange="updTgUI()"><option value="0">Any Good Surf (> Min)</option><option value="1">Epic Surf Only (> Epic)</option><option value="2">Custom Global Score</option></select>
-      </div>
-      <div id="tgCusBox" style="display:none;margin-bottom:12px;background:rgba(99,102,241,0.1);padding:12px;border-radius:10px;border:1px solid #6366f1">
-        <label>Alert if Score is Above:</label><input type="number" id="tgTh" placeholder="e.g. 40">
-      </div>
+      <div style="margin-bottom:12px"><label>Notify When...</label><select id="tgM" onchange="updTgUI()"><option value="0">Any Good Surf (> Min)</option><option value="1">Epic Surf Only (> Epic)</option><option value="2">Custom Global Score</option></select></div>
+      <div id="tgCusBox" style="display:none;margin-bottom:12px;background:rgba(99,102,241,0.1);padding:12px;border-radius:10px;border:1px solid #6366f1"><label>Alert if Score is Above:</label><input type="number" id="tgTh" placeholder="e.g. 40"></div>
       <div class="grid-2"><input type="text" id="tgT" placeholder="Token"><input type="text" id="tgC" placeholder="ChatID"></div>
     </div>
     <div class="card">
-      <div class="head"><span>PRO FORMULA BUILDER</span><div id="pfEn" class="switch" onclick="tg(this); updCalcUI()"></div></div>
-      <div id="pfInfo" class="info-box">
-         <div class="info-group">
-            <span class="info-title">1. Default Logic</span>
-            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">Used when "Pro Mode" is OFF for a spot.</div>
-            <div style="font-family:monospace;color:#a5b4fc">Energy = (Height² × Period) × 1.5</div>
-         </div>
-         <div class="info-group" style="margin-bottom:0">
-            <span class="info-title">2. Advanced Logic</span>
-            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">Active when you enable "Pro Mode" on a spot.</div>
-            <div style="font-family:monospace;color:#a5b4fc;margin-bottom:8px">Score = Energy × Wind × Angle</div>
-            
-            <div style="margin-top:6px;font-weight:700;color:#cbd5e1;font-size:11px">📐 Swell Angle Tolerance</div>
-            <div style="font-size:11px;color:#94a3b8">Must be ±45° from selected directions.</div>
-
-            <div style="margin-top:6px;font-weight:700;color:#cbd5e1;font-size:11px">🌬️ Wind Multipliers</div>
-            <ul class="info-list" style="margin-top:2px">
-               <li><b>Offshore (±45°):</b> &lt;15kph (1.3x) | &lt;30kph (1.1x) | Else (0.9x)</li>
-               <li><b>Cross-shore (±100°):</b> &lt;12kph (0.9x) | Else (0.6x)</li>
-               <li><b>Onshore:</b> &lt;10kph (0.8x) | &lt;20kph (0.4x) | Else (0.2x)</li>
-            </ul>
-         </div>
-         <div style="margin-top:15px;background:rgba(99,102,241,0.1);padding:10px;border-radius:8px;font-size:11px;border:1px solid rgba(99,102,241,0.3)">
-            ℹ️ <b>Global Override:</b> Toggle this switch ON to replace ALL logic above with a custom equation.
-         </div>
-      </div>
-      <div id="pfBox" style="display:none">
-        <label>Custom Equation (Overrides Default)</label>
-        <input type="text" id="pForm" placeholder="e.g. h * p * off">
-        <div class="calc-grid">
-           <button class="c-btn c-var" onclick="ins('h')">🌊 Height</button>
-           <button class="c-btn c-var" onclick="ins('p')">⏳ Period</button>
-           <button class="c-btn c-var" onclick="ins('w')">🌬️ Wind</button>
-           <button class="c-btn c-var" onclick="ins('off')">✅ Offshr</button>
-           <button class="c-btn" onclick="ins('+')">+</button>
-           <button class="c-btn" onclick="ins('-')">-</button>
-           <button class="c-btn" onclick="ins('*')">*</button>
-           <button class="c-btn" onclick="ins('/')">/</button>
-           <button class="c-btn" onclick="ins('(')">(</button>
-           <button class="c-btn" onclick="ins(')')">)</button>
-           <button class="c-btn" onclick="ins('.')">.</button>
-           <button class="c-btn c-act" onclick="document.getElementById('pForm').value=''">CLR</button>
-        </div>
-      </div>
+      <div class="head"><span>PRO FORMULA</span><div id="pfEn" class="switch" onclick="tg(this); updCalcUI()"></div></div>
+      <div id="pfBox" style="display:none"><label>Custom Equation</label><input type="text" id="pForm"><div class="calc-grid"><button class="c-btn c-var" onclick="ins('h')">🌊 Height</button><button class="c-btn c-var" onclick="ins('p')">⏳ Period</button><button class="c-btn c-var" onclick="ins('w')">🌬️ Wind</button><button class="c-btn c-var" onclick="ins('off')">✅ Offshr</button><button class="c-btn" onclick="ins('+')">+</button><button class="c-btn" onclick="ins('-')">-</button><button class="c-btn" onclick="ins('*')">*</button><button class="c-btn" onclick="ins('/')">/</button><button class="c-btn" onclick="ins('(')">(</button><button class="c-btn" onclick="ins(')')">)</button><button class="c-btn c-act" onclick="document.getElementById('pForm').value=''">CLR</button></div></div>
     </div>
     <div class="card">
-      <div class="head"><span>SYSTEM & UPDATES</span></div>
-      <div class="grid-2">
-         <div>
-            <label>Update Frequency</label>
-            <select id="updF"><option value="30">30 Mins</option><option value="60">1 Hour</option><option value="120">2 Hours</option><option value="180">3 Hours</option><option value="360">6 Hours</option><option value="720">12 Hours</option><option value="1440">24 Hours</option></select>
-         </div>
-         <div>
-            <label>Time Zone</label>
-            <select id="tz"></select>
-         </div>
-      </div>
-      <label style="margin-top:15px">System Log (Live Buffer)</label>
-      <div class="log-box" id="sysLog"><div class="log-line">Loading logs...</div></div>
-      <div style="margin-top:10px;font-size:11px;color:#64748b;text-align:center">Device runs on GMT time internally.</div>
+      <div class="head"><span>SYSTEM</span></div>
+      <div class="grid-2"><div><label>Update Frequency</label><select id="updF"><option value="30">30 Mins</option><option value="60">1 Hour</option><option value="360">6 Hours</option></select></div><div><label>Time Zone</label><select id="tz"></select></div></div>
+      <label style="margin-top:15px">System Log</label><div class="log-box" id="sysLog"></div>
     </div>
   </div>
 </div>
 <button class="fab" onclick="save()">NO CHANGES</button>
+
+<div class="modal-overlay" id="mo"></div>
+<div class="modal-box" id="mb">
+   <div style="font-weight:900;color:white;text-transform:uppercase;margin-bottom:10px;text-align:center">📍 Select Spot</div>
+   <div class="map-hint">⚠️ IMPORTANT: Please click firmly in the WATER, not on the beach or land.</div>
+   <div class="map-search"><input type="text" id="mQ" placeholder="Search City..."><button class="btn-geo" style="flex:0 0 60px" onclick="geoSearch()">GO</button></div>
+   <div id="map"></div>
+   <div class="map-res" id="mR">Drag map and click to pin.</div>
+   <div style="display:flex;gap:10px;margin-top:15px">
+      <button class="btn-close" onclick="closeMap()">Cancel</button>
+      <button class="btn-geo" onclick="confirmMap()">USE THIS SPOT</button>
+   </div>
+</div>
+
 <script>
 const dirs=['N','NE','E','SE','S','SW','W','NW'];
 const rndCols=['#ef4444','#f97316','#f59e0b','#84cc16','#10b981','#06b6d4','#3b82f6','#8b5cf6','#d946ef','#f43f5e'];
-const anims = [
-  {v:0, t:"Static Light"},
-  {v:1, t:"Breathe (Pulse)"},
-  {v:2, t:"Tide (Flowing)"},
-  {v:3, t:"Coastal (Plasma)"},
-  {v:4, t:"Swell (Gradient)"},
-  {v:5, t:"Breaker (Comet)"},
-  {v:6, t:"Rainbow Cycle"}
-];
-document.querySelectorAll('.anim-sel').forEach(s => {
-  anims.forEach(a => { let opt = document.createElement('option'); opt.value = a.v; opt.text = a.t; s.appendChild(opt); });
-});
-
-const DB_URL = "https://gist.githubusercontent.com/naotokui/01c384bf58ca43261eafe6a5e2ad6e85/raw/fbd3c85bea04c7837403c0b701d37c1af25fe208/surfspots.json";
-let db = []; let countries = new Set();
+const anims = [{v:0, t:"Static Light"},{v:1, t:"Breathe (Pulse)"}, {v:2, t:"Tide (Flowing)"},{v:3, t:"Coastal (Plasma)"}, {v:4, t:"Swell (Gradient)"},{v:5, t:"Breaker (Comet)"},{v:6, t:"Rainbow Cycle"}];
+document.querySelectorAll('.anim-sel').forEach(s => {anims.forEach(a => { let opt = document.createElement('option'); opt.value = a.v; opt.text = a.t; s.appendChild(opt); });});
 const tzSel = document.getElementById('tz');
 for(let i=-12; i<=14; i++){ let txt = i>=0 ? `GMT+${i}` : `GMT${i}`; let opt = document.createElement('option'); opt.value = i; opt.text = txt; tzSel.appendChild(opt); }
-fetch(DB_URL).then(r=>r.json()).then(data => {
-  db = data.map(x => { let rawC = x.Country || x.country || "World"; let cleanC = rawC.split(',')[0].trim(); return { n: x.Spot || x.spot || x.Name || x.name || "Unknown", c: cleanC, full_c: rawC, la: x.Latitude || x.latitude || x.lat || x.Lat, lo: x.Longitude || x.longitude || x.lon || x.Lon || x.lng || x.Lng }; }).filter(x => x.la && x.lo);
-  db.forEach(x => countries.add(x.c));
-  document.getElementById('dbStat').innerText = `✅ ${db.length} Spots | ${countries.size} Countries`;
-}).catch(e => { console.error(e); document.getElementById('dbStat').innerText = "⚠️ Database Offline"; });
+
 function sw(t){document.querySelectorAll('.tab').forEach((e,i)=>e.classList.toggle('active',i===t));for(let i=0;i<3;i++)document.getElementById('p'+i).classList.toggle('hidden',i!==t);}
 function tg(el){el.classList.toggle('on'); markDirty();}
 function tgPwr(el){el.classList.toggle('on'); save(); }
@@ -381,26 +279,126 @@ function tgDir(btn){ btn.classList.toggle('active'); markDirty(); }
 function updUI(){const eff=document.getElementById('lEff').value;document.getElementById('colBox').style.display=(eff==6)?'none':'block';}
 function updEpicUI(){const eff=document.getElementById('eAnim').value;document.getElementById('eColBox').style.display=(eff==6)?'none':'block';}
 function updTgUI(){const m=document.getElementById('tgM').value;document.getElementById('tgCusBox').style.display=(m==2)?'block':'none';}
-function updCalcUI(){const on=document.getElementById('pfEn').classList.contains('on'); document.getElementById('pfBox').style.display = on ? 'block' : 'none'; document.getElementById('pfInfo').style.display = on ? 'none' : 'block';}
+function updCalcUI(){const on=document.getElementById('pfEn').classList.contains('on'); document.getElementById('pfBox').style.display = on ? 'block' : 'none';}
 function ins(v){ const el = document.getElementById('pForm'); el.value += v; markDirty(); }
-function filter(inp) { const container = inp.closest('.db-tool'); const selCtry = container.querySelector('.ctry-sel').value; const box = container.querySelector('.sug-box'); const val = inp.value.toLowerCase(); box.innerHTML = ''; const matches = db.filter(s => { const matchCtry = (selCtry === "" || s.c === selCtry); const matchName = (val.length === 0 || s.n.toLowerCase().includes(val)); return matchCtry && matchName; }).slice(0, 100); if(matches.length > 0 && (val.length >= 1 || selCtry !== "")) { box.style.display='block'; matches.forEach(m => { const d = document.createElement('div'); d.className='sug-item'; d.innerHTML = `<span>${m.n}</span><span class="sug-ctry">${m.full_c}</span>`; d.onclick = () => { const spotEl = inp.closest('.spot'); spotEl.querySelector('.spot-nm').value = m.n + " (" + m.c + ")"; spotEl.querySelector('.la').value = m.la; spotEl.querySelector('.lo').value = m.lo; container.style.display='none'; markDirty(); }; box.appendChild(d); }); } else { box.style.display='none'; } }
-function mkSpot(s, showDbTool = false){ 
+
+// --- MAP LOGIC ---
+let map, marker, targetSpotEl;
+function openMap(btn) {
+  targetSpotEl = btn.closest('.spot');
+  document.getElementById('mo').style.display='block';
+  document.getElementById('mb').style.display='block';
+  
+  // 1. Get current input values
+  const curLat = parseFloat(targetSpotEl.querySelector('.la').value);
+  const curLon = parseFloat(targetSpotEl.querySelector('.lo').value);
+  const hasLoc = !isNaN(curLat) && !isNaN(curLon) && (Math.abs(curLat)>0.1 || Math.abs(curLon)>0.1);
+
+  if(!map) {
+     map = L.map('map').setView([20, 0], 2);
+     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }).addTo(map);
+     
+     // REVERSE GEOCODING ON CLICK
+     map.on('click', function(e) {
+        if(marker) map.removeLayer(marker);
+        marker = L.marker(e.latlng).addTo(map);
+        document.getElementById('mR').innerText = "Locating...";
+        
+        // Ask Nominatim for the name of this place
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}`)
+         .then(r=>r.json()).then(d=>{
+            if(d.address) {
+                // Try to find the most relevant name (city -> town -> village -> locality)
+                let name = d.address.city || d.address.town || d.address.village || d.address.locality || d.display_name.split(',')[0];
+                document.getElementById('mR').innerText = name;
+            } else {
+                document.getElementById('mR').innerText = `Lat: ${e.latlng.lat.toFixed(4)}`;
+            }
+         }).catch(()=>{ 
+             document.getElementById('mR').innerText = `Lat: ${e.latlng.lat.toFixed(4)}`; 
+         });
+     });
+  }
+  
+  if(hasLoc) {
+      map.setView([curLat, curLon], 9);
+      if(marker) map.removeLayer(marker);
+      marker = L.marker([curLat, curLon]).addTo(map);
+  } else {
+      tryIpGeo(); 
+  }
+  setTimeout(()=>{ map.invalidateSize(); }, 200);
+}
+
+function tryIpGeo() {
+    fetch('http://ip-api.com/json').then(r=>r.json()).then(d=>{ if(d.lat && d.lon) map.setView([d.lat, d.lon], 9); }).catch(e=>console.log("Geo failed"));
+}
+
+function closeMap(){ document.getElementById('mo').style.display='none'; document.getElementById('mb').style.display='none'; }
+
+function geoSearch(){
+   const q = document.getElementById('mQ').value;
+   if(q.length < 3) return;
+   fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`).then(r=>r.json()).then(d=>{
+      if(d && d.length > 0){
+         const lat = parseFloat(d[0].lat); const lon = parseFloat(d[0].lon);
+         map.setView([lat, lon], 12);
+         if(marker) map.removeLayer(marker);
+         marker = L.marker([lat,lon]).addTo(map);
+         document.getElementById('mR').innerText = d[0].display_name.split(',')[0];
+      } else { document.getElementById('mR').innerText = "Not found."; }
+   });
+}
+
+function confirmMap() {
+   if(!marker) return;
+   const btn = document.querySelector('#mb .btn-geo:last-child');
+   const originalText = btn.innerText;
+   const ll = marker.getLatLng();
+   btn.innerText = "⏳ VALIDATING WATER...";
+   btn.disabled = true;
+   
+   // --- VALIDATION: CHECK SWELL ONLY ---
+   const testUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${ll.lat}&longitude=${ll.lng}&daily=swell_wave_height_max&timezone=auto&forecast_days=1`;
+   
+   fetch(testUrl).then(r => r.json()).then(data => {
+      if (data.daily && data.daily.swell_wave_height_max && data.daily.swell_wave_height_max[0] !== null) {
+         // Success
+         const nameText = document.getElementById('mR').innerText;
+         // Use the reverse-geocoded name if available, otherwise just coordinates
+         let finalName = (nameText.includes("Lat:") || nameText.includes("Locating")) ? "New Spot" : nameText;
+         
+         targetSpotEl.querySelector('.spot-nm').value = finalName; 
+         targetSpotEl.querySelector('.la').value = ll.lat.toFixed(4);
+         targetSpotEl.querySelector('.lo').value = ll.lng.toFixed(4);
+         markDirty(); closeMap();
+      } else {
+         // Fail
+         btn.classList.add('shake');
+         setTimeout(()=>btn.classList.remove('shake'), 500);
+         alert("⛔ NO WAVES HERE!\n\nThe selected point seems to be on land. Please click a spot slightly further out in the ocean.");
+      }
+   }).catch(e => { alert("⚠️ Network Error. Try again."); }).finally(() => { btn.innerText = originalText; btn.disabled=false; });
+}
+// ----------------
+
+function mkSpot(s){ 
     let btns=''; for(let i=0;i<8;i++){ let m = s.mask || 0; let active = (m >> i) & 1 ? 'active' : ''; btns += `<div class="dir-btn ${active}" onclick="tgDir(this)" data-v="${1<<i}">${dirs[i]}</div>`; } 
     let wOpts=''; dirs.forEach((d,i)=>{ let wd = s.wDir || 0; wOpts+=`<option value="${i*45}" ${wd==i*45?'selected':''}>${d}</option>`; }); 
-    let cOpts = '<option value="">All Countries</option>'; Array.from(countries).sort().forEach(c => cOpts += `<option value="${c}">${c}</option>`); 
     const div=document.createElement('div');div.className='spot'; 
-    const dbStyle = showDbTool ? 'display:block' : 'display:none'; 
     div.innerHTML=`<div class="spot-top"><input class="spot-nm" value="${s.name}" placeholder="Spot Name"><div class="switch ${s.enabled?'on':''}" onclick="tg(this)"></div></div>
-    <div class="db-tool" style="${dbStyle}"><div style="font-size:10px;text-transform:uppercase;color:#6366f1;font-weight:900;margin-bottom:5px">Find in Library</div><div class="grid-2" style="margin-bottom:5px"><select class="ctry-sel" onchange="filter(this.parentElement.nextElementSibling)">${cOpts}</select><input placeholder="Search name..." oninput="filter(this)"></div><div class="sug-box"></div></div>
+    
     <div class="grid-2"><input class="la" value="${s.lat}" placeholder="Lat"><input class="lo" value="${s.lon}" placeholder="Lon"></div>
+    <div style="background:rgba(99,102,241,0.1);border:1px dashed #6366f1;border-radius:10px;padding:12px;cursor:pointer;text-align:center;margin-top:10px;margin-bottom:10px;color:#a5b4fc;font-weight:bold;font-size:12px" onclick="openMap(this)">📍 OPEN MAP PICKER</div>
+
     <div style="margin-top:5px;margin-bottom:10px"><input type="color" class="clr" value="${s.col}"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.05);padding:10px;border-radius:10px;margin-top:10px"><div><label>Forecast Days</label><input type="number" class="dy" value="${s.days}" style="width:60px;margin:0" min="1" max="7"></div><div style="text-align:right"><label>Max Score</label><span style="color:var(--acc);font-weight:900;font-size:20px">${s.pow?s.pow.toFixed(0):0}</span></div></div>
-    <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:10px;margin-top:10px"><div style="margin-bottom:8px;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;align-items:center">NOTIFY ME WHEN SCORE IS:<div class="tooltip">ℹ️<div class="tt-txt"><span class="tt-h">🌊 OCEAN (HI, Indo)</span><div class="tt-r"><span>Fair:</span> <span>> 10</span></div><div class="tt-r"><span>Good:</span> <span>> 30</span></div><div class="tt-r"><span>Epic:</span> <span>> 80</span></div><span class="tt-h">🌎 OPEN (Euro, US)</span><div class="tt-r"><span>Fair:</span> <span>> 5</span></div><div class="tt-r"><span>Good:</span> <span>> 15</span></div><div class="tt-r"><span>Epic:</span> <span>> 50</span></div><span class="tt-h">💧 SEA (Med, Baltic)</span><div class="tt-r"><span>Fair:</span> <span>> 2</span></div><div class="tt-r"><span>Good:</span> <span>> 6</span></div><div class="tt-r"><span>Epic:</span> <span>> 25</span></div></div></div></div><div class="grid-2"><div><label>Min Score</label><input type="number" class="t-min" value="${s.tMin}"></div><div><label>Epic Score</label><input type="number" class="t-epic" value="${s.tEpic}"></div></div></div>
+    <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:10px;margin-top:10px"><div style="margin-bottom:8px;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;align-items:center">THRESHOLDS<div class="tooltip">ℹ️<div class="tt-txt"><span class="tt-h">🌊 OCEAN (HI, Indo)</span><div class="tt-r"><span>Fair:</span> <span>> 10</span></div><div class="tt-r"><span>Good:</span> <span>> 30</span></div><div class="tt-r"><span>Epic:</span> <span>> 80</span></div><span class="tt-h">🌎 OPEN (Euro, US)</span><div class="tt-r"><span>Fair:</span> <span>> 5</span></div><div class="tt-r"><span>Good:</span> <span>> 15</span></div><div class="tt-r"><span>Epic:</span> <span>> 50</span></div><span class="tt-h">💧 SEA (Med, Baltic)</span><div class="tt-r"><span>Fair:</span> <span>> 2</span></div><div class="tt-r"><span>Good:</span> <span>> 6</span></div><div class="tt-r"><span>Epic:</span> <span>> 25</span></div></div></div></div><div class="grid-2"><div><label>Min Score</label><input type="number" class="t-min" value="${s.tMin}"></div><div><label>Epic Score</label><input type="number" class="t-epic" value="${s.tEpic}"></div></div></div>
     <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:10px;margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0px"><span style="font-size:11px;font-weight:800;color:#cbd5e1">PRO MODE</span><div class="switch ${s.adv?'on':''}" onclick="tgAdv(this)"></div></div><div class="pro-box" style="display:${s.adv?'block':'none'}"><label style="margin-top:0">Best Swell Directions</label><div class="compass-grid">${btns}</div><label>Ideal Offshore Wind From</label><select class="wind-sel">${wOpts}</select></div></div>
     <div style="text-align:right;margin-top:10px"><button class="del" onclick="this.closest('.spot').remove(); markDirty();">DELETE SPOT</button></div>`; 
     return div; 
 }
-function addSpot(s=null, openTool=false){ if(!s) { const rndColor = rndCols[Math.floor(Math.random()*rndCols.length)]; s={name:"",lat:"",lon:"",enabled:true,days:3,pow:0,col:rndColor,adv:false,mask:0,wDir:0,tMin:15,tEpic:50}; } const el = mkSpot(s, openTool); document.getElementById('list').appendChild(el); if(!s && !openTool) markDirty(); }
+function addSpot(s=null){ if(!s) { const rndColor = rndCols[Math.floor(Math.random()*rndCols.length)]; s={name:"",lat:"",lon:"",enabled:true,days:3,pow:0,col:rndColor,adv:false,mask:0,wDir:0,tMin:15,tEpic:50}; } const el = mkSpot(s); document.getElementById('list').appendChild(el); if(!s) { markDirty(); setTimeout(()=>{ el.querySelector('.spot-nm').focus(); el.scrollIntoView({behavior:"smooth"}); }, 100); } }
 function markDirty() { const b = document.querySelector('.fab'); b.classList.add('dirty'); b.innerText = "SAVE CHANGES"; }
 document.addEventListener('input', (e) => { if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') markDirty(); });
 function loadData() {
@@ -416,9 +414,7 @@ function loadData() {
     if(d.pfEn)document.getElementById('pfEn').classList.add('on'); else document.getElementById('pfEn').classList.remove('on');
     document.getElementById('pForm').value = d.pForm || ""; document.getElementById('updF').value = d.uFreq || 60; document.getElementById('mBri').value = d.mBri || 255; document.getElementById('mBriVal').innerText = d.mBri || 255; 
     let logH=""; d.logs.forEach(l => logH += `<div class="log-line">${l}</div>`); if(logH) document.getElementById('sysLog').innerHTML=logH; else document.getElementById('sysLog').innerHTML="<div class='log-line'>No logs yet.</div>"; 
-    document.getElementById('list').innerHTML = '';
-    d.spots.forEach(s => addSpot(s, false)); 
-    if(d.spots.length === 0) { addSpot(null, true); } 
+    document.getElementById('list').innerHTML = ''; d.spots.forEach(s => addSpot(s)); if(d.spots.length === 0) addSpot(); 
     updUI();updEpicUI(); updTgUI(); updCalcUI();
     document.getElementById('dbStat').innerText = "✅ System Online";
     const b = document.querySelector('.fab'); b.classList.remove('dirty'); b.innerText = "NO CHANGES";
@@ -725,7 +721,7 @@ void updateForecast() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 🎨 UNIFIED LED ENGINE (REFINED LOOPING)
+// 🎨 UNIFIED LED ENGINE
 // ═══════════════════════════════════════════════════════════
 
 bool isNightMode() {
