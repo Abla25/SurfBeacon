@@ -14,7 +14,7 @@ Unlike commercial alternatives that require subscriptions or cloud accounts, Sur
 
 I am not a professional developer or an electrical engineer. I am just a noob surfer who loves 3D printing and DIY electronics.
 
-I wanted a way to know if the waves were good without doom-scrolling through Surfline every 10 minutes. I designed the 3D-printed housing and the hardware setup myself. For the firmware, **I utilized AI tools to assist in generating the C++ code** for the ESP32. I then refined, tested, and tweaked the logic to create a stable, reliable device.
+I wanted a way to know if the waves were good without doom-scrolling through Surfline every 10 minutes. I designed the 3D-printed housing and the hardware setup myself. For the firmware, **I utilized AI tools to assist in generating the code** for the ESP32. I then refined, tested, and tweaked the logic to create a stable, reliable device.
 
 What started as a fun experiment is now a fully functional tool that I use daily.
 
