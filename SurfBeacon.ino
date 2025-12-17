@@ -124,7 +124,7 @@ void showLoadingAnim() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 🎨 HTML INTERFACE (Updated UI & Logic)
+// 🎨 HTML INTERFACE (Updated UI with Logic View)
 // ═══════════════════════════════════════════════════════════
 const char* wifi_custom_css = "<style>body{background-color:#121212;color:#e0e0e0;font-family:sans-serif;}button{background-color:#6366f1;color:white;border:none;padding:10px;}</style>";
 
@@ -239,6 +239,30 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cur
     </div>
     <div class="card">
       <div class="head"><span>PRO FORMULA</span><div id="pfEn" class="switch" onclick="tg(this); updCalcUI()"></div></div>
+      
+      <div id="defLogicBox">
+        <div style="margin-bottom:15px">
+           <span class="sub-head" style="font-size:13px;color:#a5b4fc">1. Default Logic</span>
+           <div style="font-size:12px;color:#64748b;margin-bottom:6px">Used when "Pro Mode" is OFF for a spot.</div>
+           <div style="font-family:'Courier New',monospace;background:rgba(15,23,42,0.5);padding:10px;border-radius:8px;border:1px solid #334155;color:#bfdbfe">Energy = (Height² × Period) × 1.5</div>
+        </div>
+        <div style="margin-bottom:15px">
+           <span class="sub-head" style="font-size:13px;color:#a5b4fc">2. Advanced Logic</span>
+           <div style="font-size:12px;color:#64748b;margin-bottom:6px">Active when you enable "Pro Mode" on a spot.</div>
+           <div style="font-family:'Courier New',monospace;background:rgba(15,23,42,0.5);padding:10px;border-radius:8px;border:1px solid #334155;color:#bfdbfe;margin-bottom:8px">Score = Energy × Wind × Angle</div>
+           <div style="font-size:11px;color:#94a3b8;padding-left:4px">
+              <div style="margin-bottom:4px">📐 <b>Swell Tolerance:</b> Must be ±45° from selected dirs.</div>
+              <div>🚩 <b>Wind Multipliers:</b></div>
+              <ul style="margin:4px 0 0 -15px;line-height:1.4">
+                 <li><b>Offshore (±45°):</b> <15kph (1.3x) | <30kph (1.1x) | Else (0.9x)</li>
+                 <li><b>Cross-shore:</b> <12kph (0.9x) | Else (0.6x)</li>
+                 <li><b>Onshore:</b> <10kph (0.8x) | <20kph (0.4x) | Else (0.2x)</li>
+              </ul>
+           </div>
+        </div>
+        <div class="info-box" style="margin-top:0;font-size:11px">ℹ️ <b>Global Override:</b> Toggle this switch ON to replace ALL logic above with a custom equation.</div>
+      </div>
+
       <div id="pfBox" style="display:none"><label>Custom Equation</label><input type="text" id="pForm"><div class="calc-grid"><button class="c-btn c-var" onclick="ins('h')">🌊 Height</button><button class="c-btn c-var" onclick="ins('p')">⏳ Period</button><button class="c-btn c-var" onclick="ins('w')">🌬️ Wind</button><button class="c-btn c-var" onclick="ins('off')">✅ Offshr</button><button class="c-btn" onclick="ins('+')">+</button><button class="c-btn" onclick="ins('-')">-</button><button class="c-btn" onclick="ins('*')">*</button><button class="c-btn" onclick="ins('/')">/</button><button class="c-btn" onclick="ins('(')">(</button><button class="c-btn" onclick="ins(')')">)</button><button class="c-btn c-act" onclick="document.getElementById('pForm').value=''">CLR</button></div></div>
     </div>
     <div class="card">
@@ -279,7 +303,11 @@ function tgDir(btn){ btn.classList.toggle('active'); markDirty(); }
 function updUI(){const eff=document.getElementById('lEff').value;document.getElementById('colBox').style.display=(eff==6)?'none':'block';}
 function updEpicUI(){const eff=document.getElementById('eAnim').value;document.getElementById('eColBox').style.display=(eff==6)?'none':'block';}
 function updTgUI(){const m=document.getElementById('tgM').value;document.getElementById('tgCusBox').style.display=(m==2)?'block':'none';}
-function updCalcUI(){const on=document.getElementById('pfEn').classList.contains('on'); document.getElementById('pfBox').style.display = on ? 'block' : 'none';}
+function updCalcUI(){
+  const on=document.getElementById('pfEn').classList.contains('on'); 
+  document.getElementById('pfBox').style.display = on ? 'block' : 'none';
+  document.getElementById('defLogicBox').style.display = on ? 'none' : 'block';
+}
 function ins(v){ const el = document.getElementById('pForm'); el.value += v; markDirty(); }
 
 // --- MAP LOGIC ---
