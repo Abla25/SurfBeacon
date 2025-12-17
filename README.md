@@ -118,7 +118,7 @@ To access it, once you've connected the lamp to your personal WiFi Network, you'
 
 ### 🌊 Tab 1: WAVES (Dashboard)
 
-  * **Spot Manager:** Add new spots using a built-in database of 3,000+ locations or manual GPS coordinates.
+  * **Spot Manager:** Add new spots using an interactive Map Picker. Search for any location worldwide, pin it visually on the map, and the system automatically validates if the selected coordinates are in the ocean.
   * **Thresholds:** Set the "Min Score" (to trigger the lamp) and "Epic Score" (to trigger notifications).
   * **Pro Config:** A visual compass interface to select swell windows and wind directions.
 
