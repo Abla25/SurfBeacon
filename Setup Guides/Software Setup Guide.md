@@ -476,7 +476,7 @@ Add 3-5 spots nearby with different colors. The lamp rotates through whatever's 
 
 **All scores show zero**
 - Pro Mode might be too restrictive (try disabling it)
-- Coordinates might be wrong (verify in Google Maps)
+- Coordinates might be on land (use the Map Picker to re-validate the spot)
 - Check system log for API errors
 - Might genuinely be flat
 
