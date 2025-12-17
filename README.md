@@ -193,6 +193,19 @@ The project uses also the `tinyexpr` C library for math parsing. You have to dow
 
 -----
 
+## 🤝 Credits & Acknowledgments
+
+This project stands on the shoulders of giants. Special thanks to:
+
+* **[Open-Meteo](https://open-meteo.com/):** For providing an incredible, free, and open-source weather API without the need for complex keys. All weather data used in this project is provided by Open-Meteo.com under CC BY 4.0.
+* **[OpenStreetMap](https://www.openstreetmap.org/):** Map data and tiles used in the spot picker are © OpenStreetMap contributors.
+* **[Leaflet.js](https://leafletjs.com/):** For the interactive map interface.
+* **Libraries:** Thanks to the creators of `FastLED`, `ArduinoJson`, `WiFiManager`, `UniversalTelegramBot`, and `TinyExpr` for their amazing work on the ESP32 ecosystem.
+
+## 📄 License
+
+This project is licensed under **Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)**.
+
 ## ⚖️ Disclaimer
 
 **For Hobbyist Use Only.**
