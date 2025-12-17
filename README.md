@@ -2,8 +2,7 @@
 
 **The intelligent, self-hosted IoT lamp that turns complex surf forecasts into beautiful light.**
 
-<img width="500" alt="surfbeacon" src="https://github.com/user-attachments/assets/3943ea6c-a1bc-4a71-b5f5-34175783e65e" />
-
+<img width="2008" height="1506" alt="surfbeaconedit" src="https://github.com/user-attachments/assets/0ac20a3f-5cd1-417d-86cc-5d64b59c70ff" />
 
 ## 📖 Introduction
 
