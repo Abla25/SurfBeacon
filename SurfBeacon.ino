@@ -96,6 +96,10 @@ unsigned long lastUpdate = 0;
 bool anySpotFiring = false; 
 uint8_t gHue = 0; 
 
+// Watchdog variables
+unsigned long lastWifiCheck = 0;
+unsigned long wifiDisconnectTime = 0;
+
 // ═══════════════════════════════════════════════════════════
 // 🛠 LOGGING HELPER
 // ═══════════════════════════════════════════════════════════
@@ -124,7 +128,7 @@ void showLoadingAnim() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 🎨 HTML INTERFACE (Updated UI with Logic View)
+// 🎨 HTML INTERFACE
 // ═══════════════════════════════════════════════════════════
 const char* wifi_custom_css = "<style>body{background-color:#121212;color:#e0e0e0;font-family:sans-serif;}button{background-color:#6366f1;color:white;border:none;padding:10px;}</style>";
 
@@ -316,8 +320,6 @@ function openMap(btn) {
   targetSpotEl = btn.closest('.spot');
   document.getElementById('mo').style.display='block';
   document.getElementById('mb').style.display='block';
-  
-  // 1. Get current input values
   const curLat = parseFloat(targetSpotEl.querySelector('.la').value);
   const curLon = parseFloat(targetSpotEl.querySelector('.lo').value);
   const hasLoc = !isNaN(curLat) && !isNaN(curLon) && (Math.abs(curLat)>0.1 || Math.abs(curLon)>0.1);
@@ -325,100 +327,62 @@ function openMap(btn) {
   if(!map) {
      map = L.map('map').setView([20, 0], 2);
      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }).addTo(map);
-     
-     // REVERSE GEOCODING ON CLICK
      map.on('click', function(e) {
         if(marker) map.removeLayer(marker);
         marker = L.marker(e.latlng).addTo(map);
         document.getElementById('mR').innerText = "Locating...";
-        
-        // Ask Nominatim for the name of this place
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}`)
          .then(r=>r.json()).then(d=>{
             if(d.address) {
-                // Try to find the most relevant name (city -> town -> village -> locality)
                 let name = d.address.city || d.address.town || d.address.village || d.address.locality || d.display_name.split(',')[0];
                 document.getElementById('mR').innerText = name;
-            } else {
-                document.getElementById('mR').innerText = `Lat: ${e.latlng.lat.toFixed(4)}`;
-            }
-         }).catch(()=>{ 
-             document.getElementById('mR').innerText = `Lat: ${e.latlng.lat.toFixed(4)}`; 
-         });
+            } else { document.getElementById('mR').innerText = `Lat: ${e.latlng.lat.toFixed(4)}`; }
+         }).catch(()=>{ document.getElementById('mR').innerText = `Lat: ${e.latlng.lat.toFixed(4)}`; });
      });
   }
-  
-  if(hasLoc) {
-      map.setView([curLat, curLon], 9);
-      if(marker) map.removeLayer(marker);
-      marker = L.marker([curLat, curLon]).addTo(map);
-  } else {
-      tryIpGeo(); 
-  }
+  if(hasLoc) { map.setView([curLat, curLon], 9); if(marker) map.removeLayer(marker); marker = L.marker([curLat, curLon]).addTo(map); } else { tryIpGeo(); }
   setTimeout(()=>{ map.invalidateSize(); }, 200);
 }
-
-function tryIpGeo() {
-    fetch('http://ip-api.com/json').then(r=>r.json()).then(d=>{ if(d.lat && d.lon) map.setView([d.lat, d.lon], 9); }).catch(e=>console.log("Geo failed"));
-}
-
+function tryIpGeo() { fetch('http://ip-api.com/json').then(r=>r.json()).then(d=>{ if(d.lat && d.lon) map.setView([d.lat, d.lon], 9); }).catch(e=>console.log("Geo failed")); }
 function closeMap(){ document.getElementById('mo').style.display='none'; document.getElementById('mb').style.display='none'; }
-
 function geoSearch(){
    const q = document.getElementById('mQ').value;
    if(q.length < 3) return;
    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`).then(r=>r.json()).then(d=>{
       if(d && d.length > 0){
          const lat = parseFloat(d[0].lat); const lon = parseFloat(d[0].lon);
-         map.setView([lat, lon], 12);
-         if(marker) map.removeLayer(marker);
-         marker = L.marker([lat,lon]).addTo(map);
+         map.setView([lat, lon], 12); if(marker) map.removeLayer(marker); marker = L.marker([lat,lon]).addTo(map);
          document.getElementById('mR').innerText = d[0].display_name.split(',')[0];
       } else { document.getElementById('mR').innerText = "Not found."; }
    });
 }
-
 function confirmMap() {
    if(!marker) return;
    const btn = document.querySelector('#mb .btn-geo:last-child');
    const originalText = btn.innerText;
    const ll = marker.getLatLng();
-   btn.innerText = "⏳ VALIDATING WATER...";
-   btn.disabled = true;
-   
-   // --- VALIDATION: CHECK SWELL ONLY ---
+   btn.innerText = "⏳ VALIDATING WATER..."; btn.disabled = true;
    const testUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${ll.lat}&longitude=${ll.lng}&daily=swell_wave_height_max&timezone=auto&forecast_days=1`;
-   
    fetch(testUrl).then(r => r.json()).then(data => {
       if (data.daily && data.daily.swell_wave_height_max && data.daily.swell_wave_height_max[0] !== null) {
-         // Success
          const nameText = document.getElementById('mR').innerText;
-         // Use the reverse-geocoded name if available, otherwise just coordinates
          let finalName = (nameText.includes("Lat:") || nameText.includes("Locating")) ? "New Spot" : nameText;
-         
          targetSpotEl.querySelector('.spot-nm').value = finalName; 
-         targetSpotEl.querySelector('.la').value = ll.lat.toFixed(4);
-         targetSpotEl.querySelector('.lo').value = ll.lng.toFixed(4);
+         targetSpotEl.querySelector('.la').value = ll.lat.toFixed(4); targetSpotEl.querySelector('.lo').value = ll.lng.toFixed(4);
          markDirty(); closeMap();
       } else {
-         // Fail
-         btn.classList.add('shake');
-         setTimeout(()=>btn.classList.remove('shake'), 500);
-         alert("⛔ NO WAVES HERE!\n\nThe selected point seems to be on land. Please click a spot slightly further out in the ocean.");
+         btn.classList.add('shake'); setTimeout(()=>btn.classList.remove('shake'), 500);
+         alert("⛔ NO WAVES HERE!\n\nThe selected point seems to be on land.");
       }
    }).catch(e => { alert("⚠️ Network Error. Try again."); }).finally(() => { btn.innerText = originalText; btn.disabled=false; });
 }
-// ----------------
-
 function mkSpot(s){ 
     let btns=''; for(let i=0;i<8;i++){ let m = s.mask || 0; let active = (m >> i) & 1 ? 'active' : ''; btns += `<div class="dir-btn ${active}" onclick="tgDir(this)" data-v="${1<<i}">${dirs[i]}</div>`; } 
     let wOpts=''; dirs.forEach((d,i)=>{ let wd = s.wDir || 0; wOpts+=`<option value="${i*45}" ${wd==i*45?'selected':''}>${d}</option>`; }); 
     const div=document.createElement('div');div.className='spot'; 
     div.innerHTML=`<div class="spot-top"><input class="spot-nm" value="${s.name}" placeholder="Spot Name"><div class="switch ${s.enabled?'on':''}" onclick="tg(this)"></div></div>
-    
     <div class="grid-2"><input class="la" value="${s.lat}" placeholder="Lat"><input class="lo" value="${s.lon}" placeholder="Lon"></div>
     <div style="background:rgba(99,102,241,0.1);border:1px dashed #6366f1;border-radius:10px;padding:12px;cursor:pointer;text-align:center;margin-top:10px;margin-bottom:10px;color:#a5b4fc;font-weight:bold;font-size:12px" onclick="openMap(this)">📍 OPEN MAP PICKER</div>
-
     <div style="margin-top:5px;margin-bottom:10px"><input type="color" class="clr" value="${s.col}"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.05);padding:10px;border-radius:10px;margin-top:10px"><div><label>Forecast Days</label><input type="number" class="dy" value="${s.days}" style="width:60px;margin:0" min="1" max="7"></div><div style="text-align:right"><label>Max Score</label><span style="color:var(--acc);font-weight:900;font-size:20px">${s.pow?s.pow.toFixed(0):0}</span></div></div>
     <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:10px;margin-top:10px"><div style="margin-bottom:8px;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;align-items:center">THRESHOLDS<div class="tooltip">ℹ️<div class="tt-txt"><span class="tt-h">🌊 OCEAN (HI, Indo)</span><div class="tt-r"><span>Fair:</span> <span>> 10</span></div><div class="tt-r"><span>Good:</span> <span>> 30</span></div><div class="tt-r"><span>Epic:</span> <span>> 80</span></div><span class="tt-h">🌎 OPEN (Euro, US)</span><div class="tt-r"><span>Fair:</span> <span>> 5</span></div><div class="tt-r"><span>Good:</span> <span>> 15</span></div><div class="tt-r"><span>Epic:</span> <span>> 50</span></div><span class="tt-h">💧 SEA (Med, Baltic)</span><div class="tt-r"><span>Fair:</span> <span>> 2</span></div><div class="tt-r"><span>Good:</span> <span>> 6</span></div><div class="tt-r"><span>Epic:</span> <span>> 25</span></div></div></div></div><div class="grid-2"><div><label>Min Score</label><input type="number" class="t-min" value="${s.tMin}"></div><div><label>Epic Score</label><input type="number" class="t-epic" value="${s.tEpic}"></div></div></div>
@@ -671,8 +635,9 @@ void updateForecast() {
     String bestTotalDate = "";
     std::vector<int> bestDayHours; 
 
+    // Optimized memory: 32kb is generally safe for ESP32
     if(cW == 200) {
-      DynamicJsonDocument* dW = new DynamicJsonDocument(48000); 
+      DynamicJsonDocument* dW = new DynamicJsonDocument(32000); 
       if (dW) {
         DeserializationError error = deserializeJson(*dW, http.getString());
         if(!error) {
@@ -1169,6 +1134,9 @@ void setup() {
   wm.setCustomHeadElement(wifi_custom_css); 
   wm.setConnectTimeout(180);
   if(!wm.autoConnect("SurfBeacon_Setup")) ESP.restart();
+  
+  // ⚡ STABILITY FIX: Keep Radio Awake for mDNS
+  WiFi.setSleep(false);
 
   if(MDNS.begin("surfbeacon")) Serial.println("MDNS started");
 
@@ -1195,20 +1163,44 @@ void setup() {
 }
 
 void loop() {
+  // 1. WEB SERVER & REBOOT
   server.handleClient();
-  timeClient.update();
-  
   if (shouldReboot && millis() - rebootTimer > 1500) ESP.restart();
-  
-  // 1. UPDATE FORECAST
-  unsigned long intervalMs = (unsigned long)conf.updateFreqMins * 60000;
-  if(millis() - lastUpdate > intervalMs) { 
-    updateForecast(); 
-    lastUpdate = millis(); 
-  }
 
-  // 2. FLUID ANIMATION
+  // 2. LED ANIMATION (High Priority - Runs every 20ms)
   EVERY_N_MILLISECONDS(20) {
     runAnimation();
+  }
+
+  // 3. NON-BLOCKING CONNECTION WATCHDOG (Checks every 60s)
+  if (millis() - lastWifiCheck > 60000) {
+    lastWifiCheck = millis();
+    
+    if (WiFi.status() != WL_CONNECTED) {
+      if (wifiDisconnectTime == 0) wifiDisconnectTime = millis(); // First moment of failure
+      
+      Serial.println("⚠️ WiFi Disconnected.");
+      
+      // If down for > 3 minutes, force a REBOOT (Self-Healing)
+      if (millis() - wifiDisconnectTime > 180000) {
+        Serial.println("❌ WiFi down > 3mins. Rebooting.");
+        ESP.restart();
+      }
+      
+      // Try to reconnect gently
+      WiFi.reconnect(); 
+    } else {
+      // All good
+      wifiDisconnectTime = 0; 
+      timeClient.update();
+    }
+  }
+
+  // 4. FORECAST UPDATE
+  unsigned long intervalMs = (unsigned long)conf.updateFreqMins * 60000;
+  // Only try if we are actually connected
+  if(WiFi.status() == WL_CONNECTED && millis() - lastUpdate > intervalMs) { 
+    updateForecast(); 
+    lastUpdate = millis(); 
   }
 }
