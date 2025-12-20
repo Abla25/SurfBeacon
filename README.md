@@ -10,6 +10,8 @@
 
 Unlike commercial alternatives that require subscriptions or cloud accounts, SurfBeacon is **completely self-contained**. It runs its own web server, performs its own data analysis, and stores your "Secret Spot" coordinates locally on the chip.
 
+<img width="2000" height="1308" alt="splitscreen_texts (1)" src="https://github.com/user-attachments/assets/45a6b631-818a-480a-8e81-a3ddaa95e4e5" />
+
 ### 🙋‍♂️ The Story Behind the Project
 
 I am not a professional developer or an electrical engineer. I am just a noob surfer who loves 3D printing and DIY electronics.
